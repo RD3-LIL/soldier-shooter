@@ -23,40 +23,53 @@
     }
   }
   *{ box-sizing:border-box; }
-  html,body{ margin:0; padding:0; }
+  html,body{ margin:0; padding:0; height:100%; }
   body{
     background:var(--bg); color:var(--ink);
     font-family:"IBM Plex Mono", ui-monospace, Menlo, monospace;
     -webkit-font-smoothing:antialiased;
+    height:100dvh; overflow:hidden;
+    /* vertical space taken by everything except the arena:
+       wrap padding + gaps + HUD + the panels under the stage */
+    --chrome:198px;
   }
+  @media (max-width:900px){ body{ --chrome:266px; } }
+  @media (pointer:coarse){ body{ --chrome:352px; } }
+  @media (pointer:coarse) and (max-width:900px){ body{ --chrome:426px; } }
   button{ font-family:inherit; min-height:44px; cursor:pointer; }
-  .wrap{ max-width:1180px; margin:0 auto; padding:14px 14px 28px; }
+  .wrap{
+    max-width:1180px; margin:0 auto; padding:8px 12px;
+    height:100dvh; display:flex; flex-direction:column; gap:8px;
+  }
 
   /* ---------- HUD ---------- */
   .hud{
-    display:flex; flex-wrap:wrap; gap:10px; align-items:stretch; margin-bottom:10px;
+    display:flex; flex-wrap:nowrap; gap:8px; align-items:stretch; flex:0 0 auto;
   }
+  @media (max-width:900px){ .hud{ flex-wrap:wrap; } }
   .hud .box{
     background:var(--panel); border:2px solid var(--line); border-radius:6px;
-    padding:8px 12px; display:flex; flex-direction:column; justify-content:center; gap:5px;
+    padding:5px 10px; display:flex; flex-direction:column; justify-content:center; gap:4px;
   }
-  .hud .label{ font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink2); font-weight:700; }
-  .hud .big{ font-family:"Press Start 2P", monospace; font-size:15px; line-height:1; }
-  .hpbox{ flex:1 1 200px; min-width:170px; }
-  .hpbar{ height:14px; background:var(--panel2); border:2px solid var(--line); border-radius:3px; overflow:hidden; }
+  .hud .label{ font-size:9px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink2); font-weight:700; }
+  .hud .big{ font-family:"Press Start 2P", monospace; font-size:13px; line-height:1; white-space:nowrap; }
+  .hpbox{ flex:1 1 200px; min-width:150px; }
+  .hpbar{ height:12px; background:var(--panel2); border:2px solid var(--line); border-radius:3px; overflow:hidden; }
   .hpfill{ height:100%; width:100%; background:var(--hp); transition:width .18s ease, background .18s ease; }
   .hpfill.low{ background:var(--hp-low); }
   .hud .btns{ flex-direction:row; align-items:center; gap:8px; }
   .sbtn{
     background:var(--panel2); color:var(--ink); border:2px solid var(--line); border-radius:6px;
-    padding:0 14px; font-weight:700; font-size:13px;
+    padding:0 12px; font-weight:700; font-size:12px; white-space:nowrap;
   }
   .sbtn:active{ transform:translateY(1px); }
 
   /* ---------- Stage ---------- */
   .stage{
     position:relative; background:#20241a; border:3px solid var(--line); border-radius:8px;
-    overflow:hidden; aspect-ratio:16/9; width:100%;
+    overflow:hidden; aspect-ratio:16/9; flex:0 0 auto; margin:0 auto;
+    /* as wide as the column allows, but never so tall that the page scrolls */
+    width:min(100%, calc((100dvh - var(--chrome)) * 16 / 9));
     touch-action:none; user-select:none; -webkit-user-select:none;
   }
   canvas#game{ display:block; width:100%; height:100%; image-rendering:pixelated; cursor:crosshair; }
@@ -108,17 +121,42 @@
   .statrow{ display:flex; gap:18px; flex-wrap:wrap; margin:12px 0; }
   .statrow div{ font-size:13px; color:var(--ink2); }
   .statrow b{ display:block; font-size:22px; color:var(--ink); font-family:"Press Start 2P", monospace; margin-bottom:4px; }
+  /* shorter screens: squeeze the lobby/result card so it fits inside the arena */
+  @media (max-height:820px){
+    .card{ padding:13px 16px; }
+    .card p{ margin:5px 0; font-size:13px; line-height:1.45; }
+    .roster{ gap:4px; margin:9px 0; }
+    .slot{ min-height:32px; padding:4px 8px; font-size:12px; }
+    .controls-grid{ gap:3px 12px; font-size:12px; margin:8px 0; }
+    .bigbtn{ font-size:13px; padding:11px 8px; margin-top:8px; }
+    .statrow{ margin:8px 0; }
+    .statrow b{ font-size:18px; }
+  }
 
   /* ---------- under-stage panels ---------- */
-  .below{ display:grid; grid-template-columns:1.2fr .8fr; gap:10px; margin-top:10px; }
-  @media (max-width:760px){ .below{ grid-template-columns:1fr; } }
-  .panel{ background:var(--panel); border:2px solid var(--line); border-radius:6px; padding:12px 14px; }
-  .panel h2{ font-size:11px; letter-spacing:.13em; text-transform:uppercase; margin:0 0 9px; color:var(--ink2); }
-  #feed{ list-style:none; margin:0; padding:0; font-size:13px; display:flex; flex-direction:column; gap:5px; min-height:24px; }
-  #feed li{ line-height:1.4; }
+  .below{
+    display:grid; grid-template-columns:1.15fr .85fr; gap:8px;
+    flex:0 0 auto; height:110px;
+  }
+  .panel{
+    background:var(--panel); border:2px solid var(--line); border-radius:6px;
+    padding:8px 12px; overflow:hidden; min-width:0;
+  }
+  .panel h2{ font-size:10px; letter-spacing:.13em; text-transform:uppercase; margin:0 0 6px; color:var(--ink2); }
+  #feed{ list-style:none; margin:0; padding:0; font-size:12px; display:flex; flex-direction:column; gap:3px; }
+  #feed li{ line-height:1.35; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   #feed .t{ color:var(--ink2); font-size:11px; margin-right:7px; }
-  #standings{ list-style:none; margin:0; padding:0; font-size:13px; display:flex; flex-direction:column; gap:5px; }
-  #standings li{ display:flex; align-items:center; gap:8px; }
+  #standings{
+    list-style:none; margin:0; padding:0; font-size:12px;
+    display:grid; grid-template-columns:1fr 1fr; gap:3px 14px;
+  }
+  #standings li{ display:flex; align-items:center; gap:7px; min-width:0; }
+  #standings li span:nth-child(2){ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  @media (max-width:560px){
+    #standings{ grid-template-columns:1fr 1fr; font-size:11px; gap:3px 8px; }
+    #feed{ font-size:11px; }
+    .panel{ padding:7px 9px; }
+  }
   #standings .dot{ width:11px; height:11px; border-radius:50%; border:2px solid rgba(0,0,0,.3); flex:0 0 auto; }
   #standings .hpmini{ margin-left:auto; font-size:11px; color:var(--ink2); }
   #standings li.dead{ opacity:.45; text-decoration:line-through; }
@@ -126,7 +164,7 @@
 
   /* ---------- touch controls ---------- */
   .touch{
-    display:none; gap:10px; margin-top:10px; justify-content:space-between; align-items:center;
+    display:none; gap:10px; flex:0 0 auto; justify-content:space-between; align-items:center;
   }
   .touch .cluster{ display:flex; gap:8px; align-items:center; }
   .touch .dpad{ display:grid; grid-template-columns:repeat(3,54px); grid-template-rows:repeat(2,54px); gap:4px; }
@@ -138,7 +176,8 @@
   .tbtn.fire{ width:76px; height:76px; border-radius:50%; background:var(--accent); color:#fff; font-size:13px; font-family:"Press Start 2P", monospace; }
   .tbtn.held{ filter:brightness(1.25); }
   @media (pointer:coarse){ .touch{ display:flex; } }
-  .hint{ font-size:12px; color:var(--ink2); margin-top:10px; line-height:1.5; }
+  .hint{ font-size:11px; color:var(--ink2); margin:0; line-height:1.4; flex:0 0 auto; }
+  @media (pointer:fine){ .hint{ display:none; } }
   @media (prefers-reduced-motion: reduce){
     .hpfill{ transition:none; }
   }

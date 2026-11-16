@@ -34,8 +34,12 @@
     --chrome:198px;
   }
   @media (max-width:900px){ body{ --chrome:266px; } }
-  @media (pointer:coarse){ body{ --chrome:386px; } }
-  @media (pointer:coarse) and (max-width:900px){ body{ --chrome:460px; } }
+  /* touch: the sticks now float on the arena itself, so the only space
+     outside the stage is the HUD plus the panels under it */
+  @media (pointer:coarse){ body{ --chrome:312px; } }
+  /* touch held sideways: panels under the stage hide, HUD goes slim,
+     and nearly the whole screen height belongs to the arena */
+  @media (pointer:coarse) and (orientation:landscape){ body{ --chrome:84px; } }
   button{ font-family:inherit; min-height:44px; cursor:pointer; }
   .wrap{
     max-width:1180px; margin:0 auto; padding:8px 12px;
@@ -162,39 +166,64 @@
   #standings li.dead{ opacity:.45; text-decoration:line-through; }
   #standings li.me{ font-weight:700; }
 
-  /* ---------- touch controls: twin thumbsticks ---------- */
-  .touch{
-    display:none; gap:10px; flex:0 0 auto; justify-content:space-between; align-items:center;
-    padding:2px 6px;
-  }
-  .stick-wrap{ display:flex; flex-direction:column; align-items:center; gap:4px; }
-  .stick-label{ font-size:9px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink2); font-weight:700; }
-  .stick{
-    position:relative; width:118px; height:118px; border-radius:50%;
-    border:3px solid var(--line); background:var(--panel);
+  /* ---------- touch controls: floating thumbsticks on the arena ----------
+     Each half of the arena is a touch zone. The stick base appears wherever
+     the thumb lands and the knob follows it, so there is no small fixed
+     circle to hunt for or slide off. */
+  .zone{
+    position:absolute; top:0; bottom:0; width:50%; z-index:3; display:none;
     touch-action:none; user-select:none; -webkit-user-select:none;
-    flex:0 0 auto;
   }
-  .stick::before{
-    content:""; position:absolute; inset:14px; border-radius:50%;
-    border:2px dashed var(--line); opacity:.55; pointer-events:none;
+  .zone.left{ left:0; } .zone.right{ right:0; }
+  @media (pointer:coarse){ body.playing .zone{ display:block; } }
+  .fstick{
+    position:absolute; width:112px; height:112px; border-radius:50%; z-index:4;
+    border:3px solid rgba(255,255,255,.55); background:rgba(18,22,12,.30);
+    transform:translate(-50%,-50%); display:none; pointer-events:none;
   }
-  .stick .knob{
+  .fstick.on{ display:block; }
+  .fstick .fknob{
     position:absolute; left:50%; top:50%; width:54px; height:54px; border-radius:50%;
     margin:-27px 0 0 -27px;
-    background:var(--panel2); border:3px solid var(--ink2);
-    box-shadow:0 3px 8px rgba(0,0,0,.3); pointer-events:none;
+    background:rgba(244,241,232,.88); border:3px solid rgba(35,40,28,.65);
+    box-shadow:0 3px 8px rgba(0,0,0,.35);
     display:flex; align-items:center; justify-content:center;
-    font-size:17px; color:var(--ink2); font-weight:700;
+    font-size:17px; color:#23281c; font-weight:700;
   }
-  .stick.aim .knob{ background:var(--accent); border-color:#7f1d1d; color:#fff; font-size:11px; font-family:"Press Start 2P", monospace; }
-  .stick.active{ border-color:var(--gold); }
-  .stick.aim.active{ border-color:var(--accent); }
-  .stick.active .knob{ filter:brightness(1.12); }
-  @media (pointer:coarse){ .touch{ display:flex; } }
-  @media (max-width:420px){ .stick{ width:104px; height:104px; } .stick .knob{ width:48px; height:48px; margin:-24px 0 0 -24px; } }
-  .hint{ font-size:11px; color:var(--ink2); margin:0; line-height:1.4; flex:0 0 auto; }
-  @media (pointer:fine){ .hint{ display:none; } }
+  .fstick.aim{ border-color:rgba(255,120,100,.6); }
+  .fstick.aim .fknob{ background:rgba(179,57,46,.92); border-color:rgba(127,29,29,.85); color:#fff; font-size:10px; font-family:"Press Start 2P", monospace; }
+  /* faint home circles in the bottom corners while a stick is idle */
+  .stick-home{
+    position:absolute; bottom:14px; width:92px; height:92px; border-radius:50%; z-index:3;
+    border:2px dashed rgba(255,255,255,.4); background:rgba(18,22,12,.22);
+    display:none; flex-direction:column; align-items:center; justify-content:center; gap:2px;
+    color:rgba(255,255,255,.85); pointer-events:none;
+    font-size:15px; font-weight:700;
+  }
+  .stick-home small{ font-size:8px; letter-spacing:.14em; }
+  .stick-home.left{ left:14px; }
+  .stick-home.right{ right:14px; }
+  .stick-home.aim{ border-color:rgba(255,120,100,.5); color:#ffb4a2; font-size:10px; font-family:"Press Start 2P", monospace; }
+  .stick-home.off{ display:none !important; }
+  @media (pointer:coarse){ body.playing .stick-home{ display:flex; } body.playing .stick-home.off{ display:none; } }
+  /* portrait touch: nudge to turn the phone sideways */
+  .rotate-pill{
+    position:absolute; top:8px; left:50%; transform:translateX(-50%); z-index:4;
+    background:rgba(18,22,12,.78); color:#f4f1e8; border:2px solid rgba(255,255,255,.35);
+    border-radius:999px; padding:7px 14px; font-size:11px; font-weight:700; white-space:nowrap;
+    display:none; pointer-events:none; max-width:94%;
+  }
+  @media (pointer:coarse) and (orientation:portrait){ body.playing .rotate-pill{ display:block; } }
+  /* landscape touch: slim HUD, no panels under the stage, arena takes the screen */
+  @media (pointer:coarse) and (orientation:landscape){
+    .wrap{ gap:5px; padding:5px 8px; }
+    .below{ display:none; }
+    .hud{ flex-wrap:nowrap; }
+    .hud .box{ padding:3px 9px; }
+    .hud .big{ font-size:11px; }
+    .hpbar{ height:8px; }
+    .sbtn{ min-height:36px; }
+  }
   @media (prefers-reduced-motion: reduce){
     .hpfill{ transition:none; }
   }
@@ -229,6 +258,15 @@
   <div class="stage" id="stage">
     <canvas id="game" width="1600" height="900"></canvas>
 
+    <!-- touch zones + floating sticks (touch only, while playing) -->
+    <div class="zone left" id="zoneMove" aria-hidden="true"></div>
+    <div class="zone right" id="zoneAim" aria-hidden="true"></div>
+    <div class="stick-home left" id="homeMove"><span>✥</span><small>MOVE</small></div>
+    <div class="stick-home right aim" id="homeAim"><span>FIRE</span><small>AIM</small></div>
+    <div class="fstick" id="fMove"><div class="fknob">✥</div></div>
+    <div class="fstick aim" id="fAim"><div class="fknob">FIRE</div></div>
+    <div class="rotate-pill">↻ Turn your phone sideways: bigger arena, thumbs right on the glass</div>
+
     <!-- LOBBY -->
     <div class="overlay" id="lobby">
       <div class="card">
@@ -236,9 +274,10 @@
         <p class="sub">Top-down maze duels, seen from the sky like the old Wii Play Tanks! game, except you are a soldier with a gun. Eight fighters drop into one walled arena. Work the maze, use the walls for cover, bounce shots around corners, and be the last one standing.</p>
         <div class="roster" id="roster"></div>
         <div class="controls-grid">
-          <b>W A S D / Arrows</b><span>Move around the maze (on touch: left thumbstick)</span>
-          <b>Mouse</b><span>Aim your gun (on touch: right thumbstick)</span>
-          <b>Hold click</b><span>Fire. Bullets bounce off walls (on touch: push the aim stick)</span>
+          <b>W A S D / Arrows</b><span>Move around the maze (on touch: left thumb, press and drag anywhere on the left half of the arena)</span>
+          <b>Mouse</b><span>Aim your gun (on touch: right thumb, drag on the right half of the arena)</span>
+          <b>Hold click</b><span>Fire. Bullets bounce off walls (on touch: push the right thumb further out to fire)</span>
+          <b>Best sideways</b><span>On a phone, turn it horizontal: the arena fills the screen and both thumbs play right on the glass</span>
           <b>Walls</b><span>Cover. Hide, peek, and bank shots off them</span>
           <b>Crates</b><span>Walk over them for better guns and medkits</span>
           <b>Green gas</b><span>The zone closes in after 40 seconds. Stay inside the circle</span>
@@ -264,18 +303,6 @@
       </div>
     </div>
   </div>
-
-  <div class="touch" aria-label="Touch controls">
-    <div class="stick-wrap">
-      <div class="stick" id="stickMove" role="application" aria-label="Move stick: push to move"><div class="knob" id="knobMove">✥</div></div>
-      <span class="stick-label">◀ Move · Left thumb</span>
-    </div>
-    <div class="stick-wrap">
-      <div class="stick aim" id="stickAim" role="application" aria-label="Aim stick: point to aim, push to fire"><div class="knob" id="knobAim">FIRE</div></div>
-      <span class="stick-label">Aim + Fire · Right thumb ▶</span>
-    </div>
-  </div>
-  <p class="hint">On touch screens: left thumb on the MOVE stick to run, right thumb on the AIM stick to point your gun. Push the aim stick to shoot.</p>
 
   <div class="below">
     <div class="panel">
@@ -672,70 +699,80 @@ canvas.addEventListener('pointerdown', function(e){
   if(state === 'playing' && player && player.alive) fireHeld = true;
 });
 window.addEventListener('pointerup', function(){ fireHeld = false; });
-window.addEventListener('blur', function(){ fireHeld = false; keys = {}; if(typeof moveStick !== 'undefined'){ moveStick.active = false; moveStick.mag = 0; moveStick.x = 0; moveStick.y = 0; } if(typeof aimStick !== 'undefined'){ aimStick.active = false; aimStick.mag = 0; aimStick.x = 0; aimStick.y = 0; } });
+window.addEventListener('blur', function(){ fireHeld = false; keys = {}; if(typeof resetSticks === 'function') resetSticks(); });
 document.addEventListener('keydown', function(e){
   keys[e.key.toLowerCase()] = true;
   if([' ','arrowup','arrowdown','arrowleft','arrowright'].indexOf(e.key.toLowerCase()) >= 0) e.preventDefault();
   ac();
 });
 document.addEventListener('keyup', function(e){ keys[e.key.toLowerCase()] = false; });
-/* ---- twin thumbsticks (touch) ----
-   Left stick: analog movement. Right stick: its direction is the aim
-   direction; pushing it past the fire threshold also fires. Each stick
-   tracks its own pointerId, so both thumbs work at the same time. */
-var moveStick = { x:0, y:0, mag:0, active:false };
+/* ---- floating twin thumbsticks (touch) ----
+   Each half of the arena is a touch zone. Wherever a thumb lands, that
+   point becomes the centre of its stick; dragging sets the vector, and
+   the stick visual follows the thumb. The left stick moves, the right
+   stick aims and fires when pushed far enough. Each zone captures its
+   own pointerId, so both thumbs work at the same time, and a thumb can
+   wander anywhere on its half without sliding off a fixed circle. */
+var moveStick = { x:0, y:0, mag:0, ang:0, active:false };
 var aimStick  = { x:0, y:0, mag:0, ang:0, active:false };
-function makeStick(elId, knobId, stick){
-  var el = $(elId), knob = $(knobId);
-  if(!el || !knob) return;
-  var pid = null;
-  var RADIUS = 34; /* px the knob can travel from centre */
-  function setKnob(dx, dy){
-    knob.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
-  }
-  function updateFromEvent(e){
-    var r = el.getBoundingClientRect();
-    var cx = r.left + r.width/2, cy = r.top + r.height/2;
-    var dx = e.clientX - cx, dy = e.clientY - cy;
+var stickResets = [];
+function makeFloatStick(zoneId, visId, homeId, stick){
+  var zone = $(zoneId), vis = $(visId), home = $(homeId);
+  if(!zone || !vis) return;
+  var knob = vis.querySelector('.fknob');
+  var pid = null, ox = 0, oy = 0;
+  var R = 46; /* px of drag for full deflection */
+  function moveKnob(dx, dy){ knob.style.transform = 'translate(' + dx + 'px,' + dy + 'px)'; }
+  function update(e){
+    var dx = e.clientX - ox, dy = e.clientY - oy;
     var d = Math.sqrt(dx*dx + dy*dy);
-    var max = r.width/2 - 6;
-    if(d > max){ dx = dx/d*max; dy = dy/d*max; d = max; }
-    var kx = Math.abs(dx) > RADIUS ? dx/Math.abs(dx||1)*Math.min(RADIUS, Math.abs(dx)) : dx;
-    var ky = Math.abs(dy) > RADIUS ? dy/Math.abs(dy||1)*Math.min(RADIUS, Math.abs(dy)) : dy;
-    /* clamp knob travel to a circle */
-    var kd = Math.sqrt(kx*kx + ky*ky);
-    if(kd > RADIUS){ kx = kx/kd*RADIUS; ky = ky/kd*RADIUS; }
-    setKnob(kx, ky);
-    stick.x = dx/max; stick.y = dy/max;
-    stick.mag = clamp(d/max, 0, 1);
-    if(d > 4) stick.ang = Math.atan2(dy, dx);
+    var ux = d > 0 ? dx / d : 0, uy = d > 0 ? dy / d : 0;
+    var mag = clamp(d / R, 0, 1);
+    stick.x = ux * mag; stick.y = uy * mag; stick.mag = mag;
+    if(d > 5) stick.ang = Math.atan2(dy, dx);
     stick.active = true;
+    var kd = Math.min(d, R);
+    moveKnob(ux * kd, uy * kd);
   }
   function release(e){
-    if(pid !== null && e.pointerId !== undefined && e.pointerId !== pid) return;
+    if(pid === null) return;
+    if(e && e.pointerId !== undefined && e.pointerId !== pid) return;
     pid = null;
     stick.x = 0; stick.y = 0; stick.mag = 0; stick.active = false;
-    setKnob(0, 0);
-    el.classList.remove('active');
+    moveKnob(0, 0);
+    vis.classList.remove('on');
+    if(home) home.classList.remove('off');
   }
-  el.addEventListener('pointerdown', function(e){
+  zone.addEventListener('pointerdown', function(e){
+    if(e.pointerType === 'mouse') return; /* desktop aim stays on the canvas */
+    if(state !== 'playing' || pid !== null) return;
     e.preventDefault(); ac();
-    pid = e.pointerId;
-    try{ el.setPointerCapture(e.pointerId); }catch(err){}
-    el.classList.add('active');
-    updateFromEvent(e);
+    pid = e.pointerId; ox = e.clientX; oy = e.clientY;
+    try{ zone.setPointerCapture(e.pointerId); }catch(err){}
+    var sr = $('stage').getBoundingClientRect();
+    vis.style.left = (e.clientX - sr.left) + 'px';
+    vis.style.top = (e.clientY - sr.top) + 'px';
+    vis.classList.add('on');
+    if(home) home.classList.add('off');
+    update(e);
   });
-  el.addEventListener('pointermove', function(e){
+  zone.addEventListener('pointermove', function(e){
     if(pid === null || e.pointerId !== pid) return;
     e.preventDefault();
-    updateFromEvent(e);
+    update(e);
   });
-  el.addEventListener('pointerup', release);
-  el.addEventListener('pointercancel', release);
-  el.addEventListener('lostpointercapture', release);
+  zone.addEventListener('pointerup', release);
+  zone.addEventListener('pointercancel', release);
+  zone.addEventListener('lostpointercapture', release);
+  stickResets.push(release);
 }
-makeStick('stickMove', 'knobMove', moveStick);
-makeStick('stickAim', 'knobAim', aimStick);
+function resetSticks(){
+  for(var i = 0; i < stickResets.length; i++){ try{ stickResets[i](null); }catch(e){} }
+  moveStick.x = 0; moveStick.y = 0; moveStick.mag = 0; moveStick.active = false;
+  aimStick.x = 0; aimStick.y = 0; aimStick.mag = 0; aimStick.active = false;
+}
+makeFloatStick('zoneMove', 'fMove', 'homeMove', moveStick);
+makeFloatStick('zoneAim', 'fAim', 'homeAim', aimStick);
 
 /* ---------------- update ---------------- */
 function update(dt){
@@ -761,7 +798,7 @@ function update(dt){
     if(keys['w'] || keys['arrowup']) dy -= 1;
     if(keys['s'] || keys['arrowdown']) dy += 1;
     /* left thumbstick: analog movement (overrides keys while pushed) */
-    if(moveStick.active && moveStick.mag > 0.14){
+    if(moveStick.active && moveStick.mag > 0.12){
       dx = moveStick.x; dy = moveStick.y;
       stickSpeed = clamp(moveStick.mag, 0, 1);
       var sl = Math.sqrt(dx*dx + dy*dy);
@@ -774,14 +811,14 @@ function update(dt){
       tryMove(player, dx/len * 252 * stickSpeed * dt, dy/len * 252 * stickSpeed * dt);
       player.walkCycle += dt * 11;
     }
-    /* right thumbstick: direction is the aim; pushing it fires */
+    /* right thumbstick: direction is the aim; pushing it further fires */
     var stickFiring = false;
-    if(aimStick.active && aimStick.mag > 0.22){
+    if(aimStick.active && aimStick.mag > 0.16){
       player.aim = aimStick.ang;
       mouse.x = player.x + Math.cos(player.aim) * 110;
       mouse.y = player.y + Math.sin(player.aim) * 110;
       mouse.touchAim = true;
-      if(aimStick.mag > 0.38) stickFiring = true;
+      if(aimStick.mag > 0.42) stickFiring = true;
     } else if(!aimStick.active){
       player.aim = Math.atan2(mouse.y - player.y, mouse.x - player.x);
     }
@@ -1116,6 +1153,8 @@ function draw(){
 function endMatch(won){
   if(state !== 'playing') return;
   state = 'over';
+  document.body.classList.remove('playing');
+  resetSticks();
   fireHeld = false;
   if(won){ playerPlace = 1; beep(523, .16, 'square', .08); setTimeout(function(){ beep(659, .16, 'square', .08); }, 170); setTimeout(function(){ beep(784, .3, 'square', .09); }, 340); }
   else { beep(220, .4, 'sawtooth', .07, 110); }
@@ -1131,6 +1170,25 @@ function endMatch(won){
   $('statTime').textContent = fmtTime(matchTime);
   setTimeout(function(){ resultEl.classList.remove('hidden'); }, won ? 500 : 900);
 }
+/* On a touch device held upright, ask the browser for fullscreen
+   landscape so the match plays horizontal. Best effort only: if the
+   browser or frame refuses, the CSS landscape layout and the rotate
+   pill still point the player sideways. */
+function tryLandscape(){
+  try{
+    if(!window.matchMedia || !matchMedia('(pointer:coarse)').matches) return;
+    if(window.innerHeight <= window.innerWidth) return; /* already sideways */
+    var el = document.documentElement;
+    if(el.requestFullscreen){
+      var p = el.requestFullscreen();
+      if(p && p.catch) p.catch(function(){});
+    }
+    if(window.screen && screen.orientation && screen.orientation.lock){
+      var q = screen.orientation.lock('landscape');
+      if(q && q.catch) q.catch(function(){});
+    }
+  }catch(e){}
+}
 function startMatch(){
   setupMatch();
   feedEl.innerHTML = ''; feedInit = false;
@@ -1138,8 +1196,10 @@ function startMatch(){
   lobbyEl.classList.add('hidden');
   resultEl.classList.add('hidden');
   state = 'playing';
+  document.body.classList.add('playing');
   renderStandings();
   ac();
+  tryLandscape();
 }
 
 /* lobby roster fill */
@@ -1187,6 +1247,8 @@ $('btnAgain').addEventListener('click', startMatch);
 $('btnLobby').addEventListener('click', function(){
   resultEl.classList.add('hidden');
   lobbyEl.classList.remove('hidden');
+  document.body.classList.remove('playing');
+  resetSticks();
   state = 'lobby';
   setupMatch();
   buildRoster();

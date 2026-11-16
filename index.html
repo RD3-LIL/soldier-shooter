@@ -227,6 +227,30 @@
   @media (prefers-reduced-motion: reduce){
     .hpfill{ transition:none; }
   }
+
+  /* ---------- sideways fallback ----------
+     Some browsers (notably iPhone Safari) have no orientation lock, and
+     some phones have rotation locked at the OS level. When that happens
+     during a match, the whole page is rotated 90 degrees by CSS instead:
+     the player turns the phone and the game is horizontal anyway. The
+     layout mirrors the native landscape rules above. */
+  body.sideways .wrap{
+    position:fixed; left:50%; top:50%; z-index:50;
+    width:100dvh; height:100dvw; max-width:none; margin:0;
+    transform:translate(-50%,-50%) rotate(90deg);
+    gap:5px; padding:5px 8px;
+  }
+  body.sideways .below{ display:none; }
+  body.sideways .stage{ width:min(100%, calc((100dvw - 84px) * 16 / 9)); }
+  body.sideways .hud{ flex-wrap:nowrap; }
+  body.sideways .hud .box{ padding:3px 9px; }
+  body.sideways .hud .big{ font-size:11px; }
+  body.sideways .hpbar{ height:8px; }
+  body.sideways .sbtn{ min-height:36px; }
+  body.sideways .rotate-pill{ display:none !important; }
+  /* the narrow-screen rule makes overlays position:fixed, which would
+     escape the rotation; keep them inside the stage when sideways */
+  body.sideways .overlay{ position:absolute; }
 </style>
 </head>
 <body>
@@ -277,7 +301,7 @@
           <b>W A S D / Arrows</b><span>Move around the maze (on touch: left thumb, press and drag anywhere on the left half of the arena)</span>
           <b>Mouse</b><span>Aim your gun (on touch: right thumb, drag on the right half of the arena)</span>
           <b>Hold click</b><span>Fire. Bullets bounce off walls (on touch: push the right thumb further out to fire)</span>
-          <b>Best sideways</b><span>On a phone, turn it horizontal: the arena fills the screen and both thumbs play right on the glass</span>
+          <b>Best sideways</b><span>On a phone, the match plays horizontal: turn the phone sideways when you deploy. If it will not turn on its own, the game flips itself sideways, so hold the phone turned either way</span>
           <b>Walls</b><span>Cover. Hide, peek, and bank shots off them</span>
           <b>Crates</b><span>Walk over them for better guns and medkits</span>
           <b>Green gas</b><span>The zone closes in after 40 seconds. Stay inside the circle</span>
@@ -686,7 +710,20 @@ function updateHUD(){
 /* ---------------- input ---------------- */
 function stagePos(evt){
   var r = canvas.getBoundingClientRect();
-  return { x: (evt.clientX - r.left) / r.width * W, y: (evt.clientY - r.top) / r.height * H };
+  var vx = evt.clientX - r.left, vy = evt.clientY - r.top;
+  if(document.body.classList.contains('sideways')){
+    /* the stage is rotated 90deg on screen: swap and flip the axes */
+    return { x: vy / r.height * W, y: (r.width - vx) / r.width * H };
+  }
+  return { x: vx / r.width * W, y: vy / r.height * H };
+}
+/* pointer position in stage-local pixels (for placing the stick visuals),
+   accounting for the sideways CSS rotation */
+function stickLocal(clientX, clientY){
+  var sr = $('stage').getBoundingClientRect();
+  var vx = clientX - sr.left, vy = clientY - sr.top;
+  if(document.body.classList.contains('sideways')) return { x: vy, y: sr.width - vx };
+  return { x: vx, y: vy };
 }
 canvas.addEventListener('pointermove', function(e){
   if(e.pointerType !== 'mouse' && e.pointerType !== 'pen') return; /* touch aim is the right stick's job */
@@ -725,6 +762,10 @@ function makeFloatStick(zoneId, visId, homeId, stick){
   function moveKnob(dx, dy){ knob.style.transform = 'translate(' + dx + 'px,' + dy + 'px)'; }
   function update(e){
     var dx = e.clientX - ox, dy = e.clientY - oy;
+    if(document.body.classList.contains('sideways')){
+      /* screen drags are in the unrotated frame; convert to stage axes */
+      var td = dx; dx = dy; dy = -td;
+    }
     var d = Math.sqrt(dx*dx + dy*dy);
     var ux = d > 0 ? dx / d : 0, uy = d > 0 ? dy / d : 0;
     var mag = clamp(d / R, 0, 1);
@@ -749,9 +790,9 @@ function makeFloatStick(zoneId, visId, homeId, stick){
     e.preventDefault(); ac();
     pid = e.pointerId; ox = e.clientX; oy = e.clientY;
     try{ zone.setPointerCapture(e.pointerId); }catch(err){}
-    var sr = $('stage').getBoundingClientRect();
-    vis.style.left = (e.clientX - sr.left) + 'px';
-    vis.style.top = (e.clientY - sr.top) + 'px';
+    var lp = stickLocal(e.clientX, e.clientY);
+    vis.style.left = lp.x + 'px';
+    vis.style.top = lp.y + 'px';
     vis.classList.add('on');
     if(home) home.classList.add('off');
     update(e);
@@ -1170,25 +1211,68 @@ function endMatch(won){
   $('statTime').textContent = fmtTime(matchTime);
   setTimeout(function(){ resultEl.classList.remove('hidden'); }, won ? 500 : 900);
 }
-/* On a touch device held upright, ask the browser for fullscreen
-   landscape so the match plays horizontal. Best effort only: if the
-   browser or frame refuses, the CSS landscape layout and the rotate
-   pill still point the player sideways. */
-function tryLandscape(){
+/* On a touch device held upright, get the match playing horizontal.
+   First try the native route: fullscreen, THEN orientation lock. The
+   order matters: browsers reject orientation.lock() until fullscreen
+   is actually active, so the lock has to wait for the fullscreen
+   promise (the old code fired both at once and the lock always lost).
+   iPhone Safari has neither API, and some phones have rotation locked
+   in the OS, so if the screen is still portrait shortly after deploy,
+   fall back to rotating the page itself with CSS (body.sideways) and
+   let the player simply turn the phone. */
+var wantSideways = false;
+function enableSideways(){
+  wantSideways = true;
+  document.body.classList.add('sideways');
+}
+function disableSideways(){
+  wantSideways = false;
+  document.body.classList.remove('sideways');
+}
+function lockLandscape(){
   try{
-    if(!window.matchMedia || !matchMedia('(pointer:coarse)').matches) return;
-    if(window.innerHeight <= window.innerWidth) return; /* already sideways */
-    var el = document.documentElement;
-    if(el.requestFullscreen){
-      var p = el.requestFullscreen();
-      if(p && p.catch) p.catch(function(){});
-    }
     if(window.screen && screen.orientation && screen.orientation.lock){
       var q = screen.orientation.lock('landscape');
       if(q && q.catch) q.catch(function(){});
     }
   }catch(e){}
 }
+function tryLandscape(){
+  try{
+    if(!window.matchMedia || !matchMedia('(pointer:coarse)').matches) return;
+    if(window.innerWidth >= window.innerHeight){
+      document.body.classList.remove('sideways'); /* already sideways for real */
+      return;
+    }
+    var el = document.documentElement;
+    var fsDone = false;
+    if(el.requestFullscreen){
+      var p = el.requestFullscreen();
+      if(p && p.then){
+        p.then(function(){ fsDone = true; lockLandscape(); })
+         .catch(function(){ fsDone = true; });
+      } else { fsDone = true; lockLandscape(); }
+    } else { fsDone = true; lockLandscape(); }
+    /* give fullscreen + lock a moment; if we are still portrait after
+       that, the native route failed: rotate the page instead */
+    setTimeout(function(){
+      if(state !== 'playing') return;
+      if(window.innerWidth < window.innerHeight) enableSideways();
+    }, 900);
+  }catch(e){
+    if(window.innerWidth < window.innerHeight) enableSideways();
+  }
+}
+/* keep the sideways state in sync if the player physically rotates
+   mid-match: real landscape wins, back to portrait re-applies the flip */
+window.addEventListener('resize', function(){
+  if(!wantSideways) return;
+  if(window.innerWidth >= window.innerHeight){
+    document.body.classList.remove('sideways');
+  } else if(state === 'playing' || state === 'over'){
+    document.body.classList.add('sideways');
+  }
+});
 function startMatch(){
   setupMatch();
   feedEl.innerHTML = ''; feedInit = false;
@@ -1248,6 +1332,11 @@ $('btnLobby').addEventListener('click', function(){
   resultEl.classList.add('hidden');
   lobbyEl.classList.remove('hidden');
   document.body.classList.remove('playing');
+  disableSideways();
+  if(document.exitFullscreen && document.fullscreenElement){
+    var xp = document.exitFullscreen();
+    if(xp && xp.catch) xp.catch(function(){});
+  }
   resetSticks();
   state = 'lobby';
   setupMatch();

@@ -34,8 +34,8 @@
     --chrome:198px;
   }
   @media (max-width:900px){ body{ --chrome:266px; } }
-  @media (pointer:coarse){ body{ --chrome:352px; } }
-  @media (pointer:coarse) and (max-width:900px){ body{ --chrome:426px; } }
+  @media (pointer:coarse){ body{ --chrome:386px; } }
+  @media (pointer:coarse) and (max-width:900px){ body{ --chrome:460px; } }
   button{ font-family:inherit; min-height:44px; cursor:pointer; }
   .wrap{
     max-width:1180px; margin:0 auto; padding:8px 12px;
@@ -162,20 +162,37 @@
   #standings li.dead{ opacity:.45; text-decoration:line-through; }
   #standings li.me{ font-weight:700; }
 
-  /* ---------- touch controls ---------- */
+  /* ---------- touch controls: twin thumbsticks ---------- */
   .touch{
     display:none; gap:10px; flex:0 0 auto; justify-content:space-between; align-items:center;
+    padding:2px 6px;
   }
-  .touch .cluster{ display:flex; gap:8px; align-items:center; }
-  .touch .dpad{ display:grid; grid-template-columns:repeat(3,54px); grid-template-rows:repeat(2,54px); gap:4px; }
-  .tbtn{
-    width:54px; height:54px; border-radius:50%; border:3px solid var(--line);
-    background:var(--panel); color:var(--ink); font-size:18px; font-weight:700;
+  .stick-wrap{ display:flex; flex-direction:column; align-items:center; gap:4px; }
+  .stick-label{ font-size:9px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink2); font-weight:700; }
+  .stick{
+    position:relative; width:118px; height:118px; border-radius:50%;
+    border:3px solid var(--line); background:var(--panel);
     touch-action:none; user-select:none; -webkit-user-select:none;
+    flex:0 0 auto;
   }
-  .tbtn.fire{ width:76px; height:76px; border-radius:50%; background:var(--accent); color:#fff; font-size:13px; font-family:"Press Start 2P", monospace; }
-  .tbtn.held{ filter:brightness(1.25); }
+  .stick::before{
+    content:""; position:absolute; inset:14px; border-radius:50%;
+    border:2px dashed var(--line); opacity:.55; pointer-events:none;
+  }
+  .stick .knob{
+    position:absolute; left:50%; top:50%; width:54px; height:54px; border-radius:50%;
+    margin:-27px 0 0 -27px;
+    background:var(--panel2); border:3px solid var(--ink2);
+    box-shadow:0 3px 8px rgba(0,0,0,.3); pointer-events:none;
+    display:flex; align-items:center; justify-content:center;
+    font-size:17px; color:var(--ink2); font-weight:700;
+  }
+  .stick.aim .knob{ background:var(--accent); border-color:#7f1d1d; color:#fff; font-size:11px; font-family:"Press Start 2P", monospace; }
+  .stick.active{ border-color:var(--gold); }
+  .stick.aim.active{ border-color:var(--accent); }
+  .stick.active .knob{ filter:brightness(1.12); }
   @media (pointer:coarse){ .touch{ display:flex; } }
+  @media (max-width:420px){ .stick{ width:104px; height:104px; } .stick .knob{ width:48px; height:48px; margin:-24px 0 0 -24px; } }
   .hint{ font-size:11px; color:var(--ink2); margin:0; line-height:1.4; flex:0 0 auto; }
   @media (pointer:fine){ .hint{ display:none; } }
   @media (prefers-reduced-motion: reduce){
@@ -219,9 +236,9 @@
         <p class="sub">Top-down maze duels, seen from the sky like the old Wii Play Tanks! game, except you are a soldier with a gun. Eight fighters drop into one walled arena. Work the maze, use the walls for cover, bounce shots around corners, and be the last one standing.</p>
         <div class="roster" id="roster"></div>
         <div class="controls-grid">
-          <b>W A S D / Arrows</b><span>Move around the maze</span>
-          <b>Mouse</b><span>Aim your gun</span>
-          <b>Hold click</b><span>Fire. Bullets bounce off walls</span>
+          <b>W A S D / Arrows</b><span>Move around the maze (on touch: left thumbstick)</span>
+          <b>Mouse</b><span>Aim your gun (on touch: right thumbstick)</span>
+          <b>Hold click</b><span>Fire. Bullets bounce off walls (on touch: push the aim stick)</span>
           <b>Walls</b><span>Cover. Hide, peek, and bank shots off them</span>
           <b>Crates</b><span>Walk over them for better guns and medkits</span>
           <b>Green gas</b><span>The zone closes in after 40 seconds. Stay inside the circle</span>
@@ -249,19 +266,16 @@
   </div>
 
   <div class="touch" aria-label="Touch controls">
-    <div class="dpad">
-      <span></span>
-      <button class="tbtn" id="tUp" type="button" aria-label="Move up">▲</button>
-      <span></span>
-      <button class="tbtn" id="tLeft" type="button" aria-label="Move left">◀</button>
-      <button class="tbtn" id="tDown" type="button" aria-label="Move down">▼</button>
-      <button class="tbtn" id="tRight" type="button" aria-label="Move right">▶</button>
+    <div class="stick-wrap">
+      <div class="stick" id="stickMove" role="application" aria-label="Move stick: push to move"><div class="knob" id="knobMove">✥</div></div>
+      <span class="stick-label">◀ Move · Left thumb</span>
     </div>
-    <div class="cluster">
-      <button class="tbtn fire" id="tFire" type="button" aria-label="Hold to fire">FIRE</button>
+    <div class="stick-wrap">
+      <div class="stick aim" id="stickAim" role="application" aria-label="Aim stick: point to aim, push to fire"><div class="knob" id="knobAim">FIRE</div></div>
+      <span class="stick-label">Aim + Fire · Right thumb ▶</span>
     </div>
   </div>
-  <p class="hint">On touch screens: use the pad to move, drag on the arena to aim, hold FIRE to shoot.</p>
+  <p class="hint">On touch screens: left thumb on the MOVE stick to run, right thumb on the AIM stick to point your gun. Push the aim stick to shoot.</p>
 
   <div class="below">
     <div class="panel">
@@ -648,37 +662,80 @@ function stagePos(evt){
   return { x: (evt.clientX - r.left) / r.width * W, y: (evt.clientY - r.top) / r.height * H };
 }
 canvas.addEventListener('pointermove', function(e){
+  if(e.pointerType !== 'mouse' && e.pointerType !== 'pen') return; /* touch aim is the right stick's job */
   var p = stagePos(e); mouse.x = p.x; mouse.y = p.y;
-  if(e.pointerType !== 'mouse') mouse.touchAim = true;
 });
 canvas.addEventListener('pointerdown', function(e){
   ac();
+  if(e.pointerType !== 'mouse' && e.pointerType !== 'pen') return; /* touch aim/fire is the right stick's job */
   var p = stagePos(e); mouse.x = p.x; mouse.y = p.y;
-  if(e.pointerType !== 'mouse') mouse.touchAim = true;
   if(state === 'playing' && player && player.alive) fireHeld = true;
 });
 window.addEventListener('pointerup', function(){ fireHeld = false; });
-window.addEventListener('blur', function(){ fireHeld = false; keys = {}; });
+window.addEventListener('blur', function(){ fireHeld = false; keys = {}; if(typeof moveStick !== 'undefined'){ moveStick.active = false; moveStick.mag = 0; moveStick.x = 0; moveStick.y = 0; } if(typeof aimStick !== 'undefined'){ aimStick.active = false; aimStick.mag = 0; aimStick.x = 0; aimStick.y = 0; } });
 document.addEventListener('keydown', function(e){
   keys[e.key.toLowerCase()] = true;
   if([' ','arrowup','arrowdown','arrowleft','arrowright'].indexOf(e.key.toLowerCase()) >= 0) e.preventDefault();
   ac();
 });
 document.addEventListener('keyup', function(e){ keys[e.key.toLowerCase()] = false; });
-function bindHold(id, on, off){
-  var el = $(id);
-  var start = function(e){ e.preventDefault(); el.classList.add('held'); ac(); on(); };
-  var end = function(e){ e.preventDefault(); el.classList.remove('held'); if(off) off(); };
-  el.addEventListener('pointerdown', start);
-  el.addEventListener('pointerup', end);
-  el.addEventListener('pointerleave', end);
-  el.addEventListener('pointercancel', end);
+/* ---- twin thumbsticks (touch) ----
+   Left stick: analog movement. Right stick: its direction is the aim
+   direction; pushing it past the fire threshold also fires. Each stick
+   tracks its own pointerId, so both thumbs work at the same time. */
+var moveStick = { x:0, y:0, mag:0, active:false };
+var aimStick  = { x:0, y:0, mag:0, ang:0, active:false };
+function makeStick(elId, knobId, stick){
+  var el = $(elId), knob = $(knobId);
+  if(!el || !knob) return;
+  var pid = null;
+  var RADIUS = 34; /* px the knob can travel from centre */
+  function setKnob(dx, dy){
+    knob.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
+  }
+  function updateFromEvent(e){
+    var r = el.getBoundingClientRect();
+    var cx = r.left + r.width/2, cy = r.top + r.height/2;
+    var dx = e.clientX - cx, dy = e.clientY - cy;
+    var d = Math.sqrt(dx*dx + dy*dy);
+    var max = r.width/2 - 6;
+    if(d > max){ dx = dx/d*max; dy = dy/d*max; d = max; }
+    var kx = Math.abs(dx) > RADIUS ? dx/Math.abs(dx||1)*Math.min(RADIUS, Math.abs(dx)) : dx;
+    var ky = Math.abs(dy) > RADIUS ? dy/Math.abs(dy||1)*Math.min(RADIUS, Math.abs(dy)) : dy;
+    /* clamp knob travel to a circle */
+    var kd = Math.sqrt(kx*kx + ky*ky);
+    if(kd > RADIUS){ kx = kx/kd*RADIUS; ky = ky/kd*RADIUS; }
+    setKnob(kx, ky);
+    stick.x = dx/max; stick.y = dy/max;
+    stick.mag = clamp(d/max, 0, 1);
+    if(d > 4) stick.ang = Math.atan2(dy, dx);
+    stick.active = true;
+  }
+  function release(e){
+    if(pid !== null && e.pointerId !== undefined && e.pointerId !== pid) return;
+    pid = null;
+    stick.x = 0; stick.y = 0; stick.mag = 0; stick.active = false;
+    setKnob(0, 0);
+    el.classList.remove('active');
+  }
+  el.addEventListener('pointerdown', function(e){
+    e.preventDefault(); ac();
+    pid = e.pointerId;
+    try{ el.setPointerCapture(e.pointerId); }catch(err){}
+    el.classList.add('active');
+    updateFromEvent(e);
+  });
+  el.addEventListener('pointermove', function(e){
+    if(pid === null || e.pointerId !== pid) return;
+    e.preventDefault();
+    updateFromEvent(e);
+  });
+  el.addEventListener('pointerup', release);
+  el.addEventListener('pointercancel', release);
+  el.addEventListener('lostpointercapture', release);
 }
-bindHold('tLeft',  function(){ keys['arrowleft'] = true; },  function(){ keys['arrowleft'] = false; });
-bindHold('tRight', function(){ keys['arrowright'] = true; }, function(){ keys['arrowright'] = false; });
-bindHold('tUp',    function(){ keys['arrowup'] = true; },    function(){ keys['arrowup'] = false; });
-bindHold('tDown',  function(){ keys['arrowdown'] = true; },  function(){ keys['arrowdown'] = false; });
-bindHold('tFire',  function(){ if(state==='playing') fireHeld = true; }, function(){ fireHeld = false; });
+makeStick('stickMove', 'knobMove', moveStick);
+makeStick('stickAim', 'knobAim', aimStick);
 
 /* ---------------- update ---------------- */
 function update(dt){
@@ -698,20 +755,37 @@ function update(dt){
 
   /* player movement + aim */
   if(player && player.alive){
-    var dx = 0, dy = 0;
+    var dx = 0, dy = 0, stickSpeed = 1;
     if(keys['a'] || keys['arrowleft']) dx -= 1;
     if(keys['d'] || keys['arrowright']) dx += 1;
     if(keys['w'] || keys['arrowup']) dy -= 1;
     if(keys['s'] || keys['arrowdown']) dy += 1;
+    /* left thumbstick: analog movement (overrides keys while pushed) */
+    if(moveStick.active && moveStick.mag > 0.14){
+      dx = moveStick.x; dy = moveStick.y;
+      stickSpeed = clamp(moveStick.mag, 0, 1);
+      var sl = Math.sqrt(dx*dx + dy*dy);
+      if(sl > 1){ dx /= sl; dy /= sl; }
+    }
     player.moving = (dx !== 0 || dy !== 0);
     if(player.moving){
-      var len = Math.sqrt(dx*dx + dy*dy);
+      var len = Math.sqrt(dx*dx + dy*dy) || 1;
       player.moveAng = Math.atan2(dy, dx);
-      tryMove(player, dx/len * 252 * dt, dy/len * 252 * dt);
+      tryMove(player, dx/len * 252 * stickSpeed * dt, dy/len * 252 * stickSpeed * dt);
       player.walkCycle += dt * 11;
     }
-    player.aim = Math.atan2(mouse.y - player.y, mouse.x - player.x);
-    if(fireHeld && player.cool <= 0) fire(player);
+    /* right thumbstick: direction is the aim; pushing it fires */
+    var stickFiring = false;
+    if(aimStick.active && aimStick.mag > 0.22){
+      player.aim = aimStick.ang;
+      mouse.x = player.x + Math.cos(player.aim) * 110;
+      mouse.y = player.y + Math.sin(player.aim) * 110;
+      mouse.touchAim = true;
+      if(aimStick.mag > 0.38) stickFiring = true;
+    } else if(!aimStick.active){
+      player.aim = Math.atan2(mouse.y - player.y, mouse.x - player.x);
+    }
+    if((fireHeld || stickFiring) && player.cool <= 0) fire(player);
   }
 
   soldiers.forEach(function(s){
